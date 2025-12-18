@@ -1,20 +1,22 @@
-name: quadratic_solver
-description: Лабораторная работа 4 — Управление состояниями
+name: crypto_lab6
+description: Cryptocurrency Tracker for Lab Work
 publish_to: 'none'
-version: 1.0.0+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
 
+version: 1.0.0+1
+
 dependencies:
   flutter:
     sdk: flutter
-  flutter_bloc: ^8.1.5
+  http: ^0.13.4
+  flutter_bloc: ^8.1.1
+  shimmer: ^2.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true
