@@ -1,9 +1,8 @@
-// lib/screens/equation_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:quadratic_solver/states/equation_state.dart';
-import 'package:quadratic_solver/screens/equation_cubit.dart';
+import 'results_screen.dart';
+import 'history_screen.dart';
+import '../utils/shared_prefs_helper.dart';
 
 class EquationScreen extends StatefulWidget {
   const EquationScreen({super.key});
@@ -18,263 +17,292 @@ class _EquationScreenState extends State<EquationScreen> {
   final _bController = TextEditingController();
   final _cController = TextEditingController();
   bool _agreementChecked = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLastCoefficients();
+    _loadAgreementStatus();
+  }
+
+  Future<void> _loadLastCoefficients() async {
+    final coefficients = await SharedPrefsHelper.getLastCoefficients();
+    if (coefficients != null && mounted) {
+      setState(() {
+        _aController.text = coefficients[0].toString();
+        _bController.text = coefficients[1].toString();
+        _cController.text = coefficients[2].toString();
+      });
+    }
+  }
+
+  Future<void> _loadAgreementStatus() async {
+    final agreed = await SharedPrefsHelper.getAgreementStatus();
+    if (mounted) {
+      setState(() {
+        _agreementChecked = agreed;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Лабораторная работа 4'),
-        backgroundColor: Colors.blue,
+        title: const Text('Квадратное уравнение'),
+        centerTitle: true,
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Center(
-              child: Text(
-                'Козлова Дарья',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const HistoryScreen(),
                 ),
-              ),
-            ),
+              );
+            },
+            tooltip: 'История расчетов',
           ),
         ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: BlocBuilder<EquationCubit, EquationState>(
-          builder: (context, state) {
-            if (state is EquationInitial || state is EquationError) {
-              return _buildInputForm(context, state is EquationError ? state.message : null);
-            }
-
-            if (state is EquationLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is EquationSuccess) {
-              return _buildResultView(context, state);
-            }
-
-            return const Center(child: Text('Неизвестное состояние'));
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputForm(BuildContext context, String? errorMessage) {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Решение квадратного уравнения',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue,
-            ),
-          ),
-          const SizedBox(height: 10),
-          const Text('Введите коэффициенты уравнения ax² + bx + c = 0'),
-          const SizedBox(height: 20),
-
-          TextFormField(
-            controller: _aController,
-            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
-            decoration: const InputDecoration(
-              labelText: 'Коэффициент a',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.numbers),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Введите a';
-              final num = double.tryParse(value);
-              if (num == null) return 'Введите корректное число';
-              if (num == 0) return 'a не может быть 0';
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _bController,
-            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
-            decoration: const InputDecoration(
-              labelText: 'Коэффициент b',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.numbers),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Введите b';
-              if (double.tryParse(value) == null) return 'Введите корректное число';
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-
-          TextFormField(
-            controller: _cController,
-            keyboardType: TextInputType.numberWithOptions(decimal: true, signed: true),
-            decoration: const InputDecoration(
-              labelText: 'Коэффициент c',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.numbers),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) return 'Введите c';
-              if (double.tryParse(value) == null) return 'Введите корректное число';
-              return null;
-            },
-          ),
-          const SizedBox(height: 20),
-
-          Card(
-            child: CheckboxListTile(
-              title: const Text(
-                'Согласие на обработку персональных данных',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: const Text('Для выполнения расчета необходимо ваше согласие'),
-              value: _agreementChecked,
-              onChanged: (bool? value) {
-                setState(() {
-                  _agreementChecked = value ?? false;
-                });
-              },
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
-          ),
-
-          if (errorMessage != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Text(errorMessage, style: const TextStyle(color: Colors.red)),
-            ),
-
-          const SizedBox(height: 30),
-
-          Center(
-            child: ElevatedButton.icon(
-              onPressed: () {
-                if (_formKey.currentState!.validate()) {
-                  if (!_agreementChecked) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Необходимо согласие на обработку данных'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                    return;
-                  }
-
-                  final a = double.parse(_aController.text);
-                  final b = double.parse(_bController.text);
-                  final c = double.parse(_cController.text);
-
-                  context.read<EquationCubit>().calculate(a, b, c);
-                }
-              },
-              icon: const Icon(Icons.calculate),
-              label: const Text('Рассчитать корни уравнения'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                backgroundColor: Colors.blue,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultView(BuildContext context, EquationSuccess state) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Результаты решения квадратного уравнения:',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.green,
-          ),
-        ),
-        const SizedBox(height: 20),
-
-        _buildCard('Уравнение:', state.equation, Colors.blue),
-        const SizedBox(height: 15),
-        _buildCard('Дискриминант:', 'D = b² - 4ac = ${state.discriminant.toStringAsFixed(4)}', Colors.orange),
-        const SizedBox(height: 15),
-        _buildCard('Тип решения:', state.solutionType, Colors.purple),
-        const SizedBox(height: 15),
-
-        Card(
-          color: Colors.green[50],
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Корни уравнения:',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                ),
                 const SizedBox(height: 10),
-                ...state.roots.map((root) => Padding(
-                      padding: const EdgeInsets.only(bottom: 5.0),
-                      child: Text(root, style: const TextStyle(fontSize: 16)),
-                    )),
+                const Text(
+                  'Решение квадратного уравнения',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Введите коэффициенты уравнения ax² + bx + c = 0',
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 25),
+
+                // Поле для коэффициента a
+                TextFormField(
+                  controller: _aController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Коэффициент a',
+                    border: const OutlineInputBorder(),
+                    hintText: 'Введите a',
+                    prefixIcon: const Icon(Icons.numbers),
+                    suffixIcon: _aController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => _aController.clear(),
+                          )
+                        : null,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Введите коэффициент a';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Введите корректное число';
+                    }
+                    if (double.parse(value) == 0) {
+                      return 'Коэффициент a не может быть 0';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Поле для коэффициента b
+                TextFormField(
+                  controller: _bController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Коэффициент b',
+                    border: const OutlineInputBorder(),
+                    hintText: 'Введите b',
+                    prefixIcon: const Icon(Icons.numbers),
+                    suffixIcon: _bController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => _bController.clear(),
+                          )
+                        : null,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Введите коэффициент b';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Введите корректное число';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+
+                // Поле для коэффициента c
+                TextFormField(
+                  controller: _cController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    labelText: 'Коэффициент c',
+                    border: const OutlineInputBorder(),
+                    hintText: 'Введите c',
+                    prefixIcon: const Icon(Icons.numbers),
+                    suffixIcon: _cController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () => _cController.clear(),
+                          )
+                        : null,
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Введите коэффициент c';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Введите корректное число';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Чек-бокс согласия
+                Card(
+                  elevation: 2,
+                  child: CheckboxListTile(
+                    title: const Text(
+                      'Согласие на обработку персональных данных',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: const Text('Для выполнения расчета необходимо ваше согласие'),
+                    value: _agreementChecked,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        _agreementChecked = value ?? false;
+                      });
+                      SharedPrefsHelper.saveAgreementStatus(value ?? false);
+                    },
+                    controlAffinity: ListTileControlAffinity.leading,
+                    activeColor: Colors.blue,
+                  ),
+                ),
+                const SizedBox(height: 30),
+
+                // Кнопка расчета
+                Center(
+                  child: _isLoading
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton.icon(
+                          onPressed: _calculateEquation,
+                          icon: const Icon(Icons.calculate),
+                          label: const Text(
+                            'Рассчитать корни уравнения',
+                            style: TextStyle(fontSize: 18),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            backgroundColor: Colors.blue,
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 20),
+
+                // Статистика
+                FutureBuilder(
+                  future: SharedPrefsHelper.getCalculationCount(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return Card(
+                        color: Colors.blue[50],
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.countertops, color: Colors.blue),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Всего выполнено расчетов: ${snapshot.data}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
               ],
             ),
           ),
         ),
-
-        const Spacer(),
-
-        Center(
-          child: ElevatedButton.icon(
-            onPressed: () {
-              // Сброс ввода и состояния
-              _aController.clear();
-              _bController.clear();
-              _cController.clear();
-              _agreementChecked = false;
-              context.read<EquationCubit>().reset();
-            },
-            icon: const Icon(Icons.refresh),
-            label: const Text('Новое уравнение'),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-              backgroundColor: Colors.blue,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
+      ),
     );
   }
 
-  Widget _buildCard(String title, String content, MaterialColor color) {
-    return Card(
-      color: color[50],
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(fontWeight: FontWeight.bold, color: color),
+  Future<void> _calculateEquation() async {
+    if (_formKey.currentState!.validate()) {
+      if (!_agreementChecked) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Необходимо согласие на обработку данных'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      try {
+        final a = double.parse(_aController.text);
+        final b = double.parse(_bController.text);
+        final c = double.parse(_cController.text);
+
+        // Сохраняем коэффициенты
+        await SharedPrefsHelper.saveLastCoefficients(a, b, c);
+        await SharedPrefsHelper.incrementCalculationCount();
+
+        // Переход на экран результатов
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResultsScreen(
+                a: a,
+                b: b,
+                c: c,
+              ),
             ),
-            const SizedBox(height: 5),
-            Text(content, style: const TextStyle(fontSize: 16)),
-          ],
-        ),
-      ),
-    );
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    }
   }
 
   @override
