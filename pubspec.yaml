@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 name: crypto_lab6
 description: Cryptocurrency Tracker for Lab Work
+=======
+name: quadratic_solver
+description: Лабораторная работа 5 — Хранение данных
+>>>>>>> e88acab4d649dc6f1f96839d9de90755728575da
 publish_to: 'none'
 
 environment:
@@ -10,13 +15,32 @@ version: 1.0.0+1
 dependencies:
   flutter:
     sdk: flutter
+<<<<<<< HEAD
   http: ^0.13.4
   flutter_bloc: ^8.1.1
   shimmer: ^2.0.0
+=======
+
+  # UI иконки
+  cupertino_icons: ^1.0.8
+  
+  # State management
+  flutter_bloc: ^8.1.5
+  equatable: ^2.0.5
+  
+  # Для хранения данных (лабораторная 5)
+  sqflite: ^2.0.0+4
+  path: ^1.8.0
+  shared_preferences: ^2.0.0
+>>>>>>> e88acab4d649dc6f1f96839d9de90755728575da
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+<<<<<<< HEAD
+=======
+  flutter_lints: ^5.0.0
+>>>>>>> e88acab4d649dc6f1f96839d9de90755728575da
 
 flutter:
   uses-material-design: true

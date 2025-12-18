@@ -1,0 +1,38 @@
+import 'package:equatable/equatable.dart';
+
+abstract class EquationState extends Equatable {
+  const EquationState();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class EquationInitial extends EquationState {}
+
+class EquationLoading extends EquationState {}
+
+class EquationSuccess extends EquationState {
+  final String equation;
+  final double discriminant;
+  final String solutionType;
+  final List<String> roots;
+
+  const EquationSuccess({
+    required this.equation,
+    required this.discriminant,
+    required this.solutionType,
+    required this.roots,
+  });
+
+  @override
+  List<Object?> get props => [equation, discriminant, solutionType, roots];
+}
+
+class EquationError extends EquationState {
+  final String message;
+
+  const EquationError(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}
